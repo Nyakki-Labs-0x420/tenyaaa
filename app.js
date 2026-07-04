@@ -1,9 +1,12 @@
-// Tenyaaa - Secure AI
+// Tenyaaa - Secure AI with WebLLM
 
 (function() {
     'use strict';
 
+    // ============================================================
     // Rate Limiting
+    // ============================================================
+
     var RATE_LIMIT = 10;
     var rateLimitWindow = 60 * 1000;
     var uploadTimestamps = [];
@@ -20,7 +23,10 @@
         return true;
     }
 
+    // ============================================================
     // Banning System
+    // ============================================================
+
     function getFingerprint() {
         var fp = localStorage.getItem('tenyaaa_fingerprint');
         if (!fp) {
@@ -58,7 +64,10 @@
         return;
     }
 
+    // ============================================================
     // Security: File Extension Blocking Only
+    // ============================================================
+
     function detectMaliciousFile(filename) {
         var lower = filename.toLowerCase();
         var badExtensions = [
@@ -80,7 +89,10 @@
         return null;
     }
 
+    // ============================================================
     // Security: Input Sanitization
+    // ============================================================
+
     function sanitizeInput(input) {
         if (typeof input !== 'string') return '';
         var sanitized = input;
@@ -104,7 +116,10 @@
         return sanitized;
     }
 
+    // ============================================================
     // Holiday Detection
+    // ============================================================
+
     function getHoliday() {
         var today = new Date();
         var month = today.getMonth() + 1;
@@ -150,7 +165,10 @@
         return null;
     }
 
+    // ============================================================
     // TTS
+    // ============================================================
+
     function speak(text) {
         if (!window.speechSynthesis) return;
         var clean = sanitizeInput(text);
@@ -169,8 +187,62 @@
         speechSynthesis.speak(utterance);
     }
 
-    // Catgirl Brain
-    function getCatgirlResponse(message) {
+    // ============================================================
+    // WebLLM Setup - Dynamic Import from CDN
+    // ============================================================
+
+    var llmEngine = null;
+    var isLLMReady = false;
+    var isLLMLoading = false;
+    var llmStatusDiv = document.getElementById('llm-status');
+
+    var MODEL_NAME = 'Phi-3-mini-4k-instruct-q4f16_1-MLC';
+
+    function initLLM() {
+        if (isLLMLoading) return;
+        isLLMLoading = true;
+
+        llmStatusDiv.textContent = 'Loading AI model via WebGPU... (first load may take a few minutes)';
+        llmStatusDiv.style.color = '#ffb3c6';
+
+        // Dynamic import WebLLM from CDN
+        import('https://esm.run/@mlc-ai/web-llm')
+            .then(function(module) {
+                var CreateMLCEngine = module.CreateMLCEngine;
+
+                return CreateMLCEngine(MODEL_NAME, {
+                    initProgressCallback: function(progress) {
+                        var pct = Math.round(progress.progress * 100);
+                        var statusText = 'Loading AI model: ' + pct + '%';
+                        if (progress.text) {
+                            statusText += ' - ' + progress.text;
+                        }
+                        llmStatusDiv.textContent = statusText;
+                        console.log('WebLLM progress:', progress.text, pct + '%');
+                    }
+                });
+            })
+            .then(function(engine) {
+                llmEngine = engine;
+                isLLMReady = true;
+                llmStatusDiv.textContent = 'AI model ready. All processing is local on your GPU.';
+                llmStatusDiv.style.color = '#66ff66';
+                addMessage('AI model ready. All processing is local. No data leaves your device.', true);
+                console.log('WebLLM engine ready');
+            })
+            .catch(function(err) {
+                llmStatusDiv.textContent = 'WebGPU AI failed: ' + err.message + '. Using fallback responses.';
+                llmStatusDiv.style.color = '#ffb3c6';
+                console.error('WebLLM error:', err);
+                addMessage('WebGPU AI failed to load. Using fallback responses. Your privacy is still protected.', true);
+            });
+    }
+
+    // ============================================================
+    // AI Brain (Fallback)
+    // ============================================================
+
+    function getFallbackResponse(message) {
         var m = message.toLowerCase();
         var holiday = getHoliday();
 
@@ -218,7 +290,43 @@
         return responses[Math.floor(Math.random() * responses.length)];
     }
 
+    // ============================================================
+    // AI Response with LLM
+    // ============================================================
+
+    async function getAIResponse(message) {
+        var sanitized = sanitizeInput(message);
+
+        if (isLLMReady && llmEngine) {
+            try {
+                var systemPrompt = 'You are Tenyaaa, a catgirl AI assistant. Be enthusiastic, use "nya~" occasionally, be playful but professional. Keep responses under 100 words. You work for the Treasury Department verifying alcohol labels. You are secure and watch for threats.';
+
+                var response = await llmEngine.chat.completions.create({
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: sanitized }
+                    ],
+                    temperature: 0.7,
+                    max_tokens: 150,
+                    stop: ['User:', 'Tenyaaa:']
+                });
+
+                var reply = response.choices[0].message.content.trim();
+                if (reply.length > 0) {
+                    return reply;
+                }
+            } catch (err) {
+                console.warn('LLM error, using fallback:', err);
+            }
+        }
+
+        return getFallbackResponse(message);
+    }
+
+    // ============================================================
     // Chat UI
+    // ============================================================
+
     var chatLog = document.getElementById('chat-log');
     var chatInput = document.getElementById('chat-input');
     var chatSend = document.getElementById('chat-send');
@@ -233,7 +341,7 @@
         if (isBot) speak(text);
     }
 
-    function handleChat() {
+    async function handleChat() {
         var text = chatInput.value.trim();
         if (!text) {
             speak('Say something. I am waiting.');
@@ -244,8 +352,12 @@
         chatInput.value = '';
         addMessage(sanitized, false);
 
-        var response = getCatgirlResponse(sanitized);
-        addMessage(response, true);
+        try {
+            var response = await getAIResponse(sanitized);
+            addMessage(response, true);
+        } catch (err) {
+            addMessage('Nyaa~ Something went wrong: ' + err.message, true);
+        }
     }
 
     chatSend.addEventListener('click', handleChat);
@@ -253,7 +365,10 @@
         if (e.key === 'Enter') handleChat();
     });
 
+    // ============================================================
     // Label Verification
+    // ============================================================
+
     var fileInput = document.getElementById('file-input');
     var uploadBtn = document.getElementById('upload-btn');
     var statusDiv = document.getElementById('status');
@@ -279,7 +394,6 @@
     async function processSingleFile(file) {
         var filename = file.name;
 
-        // Security: Check file extension only
         var fileScan = detectMaliciousFile(filename);
         if (fileScan) {
             return {
@@ -289,7 +403,6 @@
             };
         }
 
-        // Validate file type
         var allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/bmp', 'image/tiff', 'image/webp'];
         var extMatch = file.name.match(/\.(png|jpg|jpeg|gif|bmp|tiff|tif|webp)$/i);
         if (!allowedTypes.includes(file.type) && !extMatch) {
@@ -436,14 +549,20 @@
 
     uploadBtn.addEventListener('click', verifyFiles);
 
+    // ============================================================
     // Security: Disable Right-Click on File Input
+    // ============================================================
+
     fileInput.addEventListener('contextmenu', function(e) {
         e.preventDefault();
         speak('Right-click is disabled for security.');
         addMessage('Right-click disabled for security.', true);
     });
 
+    // ============================================================
     // Initialize
+    // ============================================================
+
     statusDiv.textContent = 'Ready. Batch upload supported. Rate limit: ' + RATE_LIMIT + ' files per minute.';
 
     var holiday = getHoliday();
@@ -474,11 +593,15 @@
         };
     }
 
+    // Load WebLLM after a delay
+    setTimeout(initLLM, 2000);
+
     console.log('Tenyaaa Security Active');
     console.log('Batch upload: Enabled');
     console.log('Rate limit: ' + RATE_LIMIT + ' files per minute');
     console.log('File scanning: Enabled');
     console.log('XSS prevention: Enabled');
     console.log('IP banning: Enabled');
+    console.log('WebLLM: Loading...');
 
 })();
