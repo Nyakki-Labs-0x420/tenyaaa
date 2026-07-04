@@ -719,7 +719,7 @@
         // Store results for export
         lastBatchResults = results;
 
-        // Build results HTML
+        // Build results HTML (only once)
         var html = '<div style="margin:1rem 0;">';
         html += '<p><strong>Batch Summary:</strong></p>';
         html += '<p><strong>Total:</strong> ' + results.length + '</p>';
@@ -759,17 +759,11 @@
         }
         html += '</div>';
 
-        if (batchResults) {
-            batchResults.innerHTML = html;
-        }
+        // Display results only ONCE in resultDiv
         resultDiv.innerHTML = html;
-
-        // Attach download button event
-        var downloadBtn = document.getElementById('download-txt-btn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', function() {
-                downloadTXT(results, 'tenyaaa_report');
-            });
+        // Clear batchResults if it exists to prevent duplicate
+        if (batchResults) {
+            batchResults.innerHTML = '';
         }
 
         statusDiv.textContent = 'Batch complete. ' + totalValid + ' valid, ' + totalInvalid + ' invalid, ' + totalRejected + ' rejected.';
@@ -780,11 +774,17 @@
         speak(summaryMsg);
         addMessage(summaryMsg, true);
 
+        // Attach download button event
+        var downloadBtn = document.getElementById('download-txt-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function() {
+                downloadTXT(results, 'tenyaaa_report');
+            });
+        }
+
         uploadBtn.disabled = false;
     }
-
-    uploadBtn.addEventListener('click', verifyFiles);
-
+    
     // ============================================================
     // Security: Disable Right-Click on File Input
     // ============================================================
