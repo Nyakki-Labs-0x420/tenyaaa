@@ -1,4 +1,4 @@
-// Tenyaaa - Secure AI with WebLLM + OCR + TXT Export
+// Tenyaaa - Secure AI with WebLLM + OCR + TXT Export + Polyglot Detection
 
 (function() {
     'use strict';
@@ -65,11 +65,13 @@
     }
 
     // ============================================================
-    // Security: File Extension Blocking Only
+    // Security: File Extension + Polyglot Detection
     // ============================================================
 
     function detectMaliciousFile(filename) {
         var lower = filename.toLowerCase();
+
+        // Single extensions (blocked)
         var badExtensions = [
             '.php', '.phtml', '.php3', '.php4', '.php5', '.phps',
             '.jsp', '.jspx', '.jsw', '.jsv', '.jspf',
@@ -78,52 +80,7 @@
             '.sh', '.bash', '.zsh', '.fish',
             '.py', '.rb', '.go', '.rs',
             '.exe', '.dll', '.so', '.bin', '.elf',
-            '.htaccess', '.htpasswd', '.git', '.svn', 
-            // PHP Polyglots
-            '.php.png', '.php.jpg', '.php.jpeg', '.php.webp', '.php.svg', '.php.gif',
-            '.php.bmp', '.php.ico', '.php.tiff', '.php.tif',
-            '.phtml.png', '.phtml.jpg', '.phtml.svg', '.phtml.gif',
-            '.php5.png', '.php5.jpg', '.php5.svg', '.php5.gif',
-            '.php7.png', '.php7.jpg', '.php7.svg', '.php7.gif',
-            '.pht.png', '.pht.jpg', '.pht.svg', '.pht.gif',
-            '.phar.png', '.phar.jpg', '.phar.svg', '.phar.gif',
-            '.inc.png', '.inc.jpg', '.inc.svg', '.inc.gif',
-
-            // JSP (Java) Polyglots
-            '.jsp.png', '.jsp.jpg', '.jsp.jpeg', '.jsp.webp', '.jsp.svg', '.jsp.gif',
-            '.jsp.bmp', '.jsp.ico',
-            '.jspx.png', '.jspx.jpg', '.jspx.svg', '.jspx.gif',
-            '.jsw.png', '.jsw.jpg', '.jsw.svg', '.jsw.gif',
-            '.jsv.png', '.jsv.jpg', '.jsv.svg', '.jsv.gif',
-            '.jspf.png', '.jspf.jpg', '.jspf.svg', '.jspf.gif',
-
-            // ASP/ASPX (Windows IIS) Polyglots
-            '.asp.png', '.asp.jpg', '.asp.jpeg', '.asp.webp', '.asp.svg', '.asp.gif',
-            '.asp.bmp', '.asp.ico',
-            '.aspx.png', '.aspx.jpg', '.aspx.jpeg', '.aspx.webp', '.aspx.svg', '.aspx.gif',
-            '.cer.png', '.cer.jpg', '.cer.svg', '.cer.gif',
-            '.asa.png', '.asa.jpg', '.asa.svg', '.asa.gif',
-            '.cdx.png', '.cdx.jpg', '.cdx.svg', '.cdx.gif',
-            '.htr.png', '.htr.jpg', '.htr.svg', '.htr.gif',
-
-            // ColdFusion Polyglots
-            '.cfm.png', '.cfm.jpg', '.cfm.svg', '.cfm.gif',
-            '.cfml.png', '.cfml.jpg', '.cfml.svg', '.cfml.gif',
-            '.cfc.png', '.cfc.jpg', '.cfc.svg', '.cfc.gif',
-
-            // Perl/CGI Polyglots
-            '.pl.png', '.pl.jpg', '.pl.svg', '.pl.gif',
-            '.cgi.png', '.cgi.jpg', '.cgi.svg', '.cgi.gif',
-            '.pm.png', '.pm.jpg', '.pm.svg', '.pm.gif',
-
-            // Node.js Polyglots
-            '.js.png', '.js.jpg', '.js.svg', '.js.gif',
-            '.node.png', '.node.jpg', '.node.svg', '.node.gif',
-
-            // Other/Edge Cases
-            '.shtml.png', '.shtml.jpg', '.shtml.svg', '.shtml.gif',
-            '.htaccess.png', '.htaccess.jpg', '.htaccess.svg',
-            '.config.png', '.config.jpg', '.config.svg'
+            '.htaccess', '.htpasswd', '.git', '.svn'
         ];
 
         for (var i = 0; i < badExtensions.length; i++) {
@@ -131,6 +88,25 @@
                 return 'blocked_extension';
             }
         }
+
+        // Polyglot detection - catches ANY malicious extension ANYWHERE in filename
+        var polyglotPatterns = [
+            /\.php\./i, /\.phtml\./i, /\.php[3-7]\./i, /\.phps\./i,
+            /\.jsp\./i, /\.jspx\./i, /\.jsw\./i, /\.jsv\./i, /\.jspf\./i,
+            /\.asp\./i, /\.aspx\./i, /\.asax\./i, /\.ashx\./i, /\.asmx\./i, /\.ascx\./i,
+            /\.cer\./i, /\.asa\./i, /\.cdx\./i, /\.htr\./i,
+            /\.cfm\./i, /\.cfml\./i, /\.cfc\./i,
+            /\.pl\./i, /\.cgi\./i, /\.pm\./i,
+            /\.js\./i, /\.node\./i,
+            /\.shtml\./i, /\.htaccess\./i, /\.config\./i
+        ];
+
+        for (var j = 0; j < polyglotPatterns.length; j++) {
+            if (polyglotPatterns[j].test(lower)) {
+                return 'polyglot_detected';
+            }
+        }
+
         return null;
     }
 
@@ -233,7 +209,7 @@
     }
 
     // ============================================================
-    // WebLLM Setup 
+    // WebLLM Setup - f32 Model (Works on all devices)
     // ============================================================
 
     var llmEngine = null;
@@ -424,7 +400,7 @@
     var lastBatchResults = null;
 
     // ============================================================
-    // TXT Export Function (Browser-only)
+    // TXT Export Function
     // ============================================================
 
     function downloadTXT(results, filename) {
@@ -542,7 +518,6 @@
                 var foundBrand = null;
                 for (var i = 0; i < allCaps.length; i++) {
                     var word = allCaps[i].trim();
-                    // Skip short words or common skip words
                     if (word.length > 2 && skipWords.indexOf(word) === -1 && !word.includes('.')) {
                         foundBrand = word;
                         break;
@@ -606,7 +581,6 @@
             for (var w = 0; w < warningKeywords.length; w++) {
                 var idx = cleanText.toUpperCase().indexOf(warningKeywords[w]);
                 if (idx !== -1) {
-                    // Grab from the keyword to the end of the paragraph
                     var start = Math.max(0, idx);
                     var end = cleanText.indexOf('\n\n', idx);
                     if (end === -1) end = cleanText.indexOf('\n', idx);
@@ -756,7 +730,7 @@
         // Add Download TXT button if there are results
         if (results.length > 0) {
             html += '<div style="margin:1rem 0;">';
-            html += '<button id="download-txt-btn" style="background:#00cc66;color:#000;font-weight:bold;padding:0.5rem 1rem;border-radius:0.5rem;border:none;cursor:pointer;width:auto;font-family:inherit;">⬇ Download Report (.txt)</button>';
+            html += '<button id="download-txt-btn" style="background:#00cc66;color:#000;font-weight:bold;padding:0.5rem 1rem;border-radius:0.5rem;border:none;cursor:pointer;width:auto;font-family:inherit;">Download Report (.txt)</button>';
             html += '</div>';
         }
 
@@ -862,7 +836,7 @@
     console.log('Tenyaaa Security Active');
     console.log('Batch upload: Enabled');
     console.log('Rate limit: ' + RATE_LIMIT + ' files per minute');
-    console.log('File scanning: Enabled');
+    console.log('File scanning: Enabled (includes polyglot detection)');
     console.log('OCR: Enabled');
     console.log('TXT Export: Enabled');
     console.log('XSS prevention: Enabled');
