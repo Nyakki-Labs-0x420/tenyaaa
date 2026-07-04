@@ -196,7 +196,7 @@
     var isLLMLoading = false;
     var llmStatusDiv = document.getElementById('llm-status');
 
-    var MODEL_NAME = 'TinyLlama-1.1B-Chat-v1.0-q4f32_1-MLC';
+    var MODEL_NAME = 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC';
 
     function initLLM() {
         if (isLLMLoading) return;
