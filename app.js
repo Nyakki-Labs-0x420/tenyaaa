@@ -1,4 +1,4 @@
-// Tenyaaa - Secure AI with WebLLM + OCR + TXT Export + Polyglot Detection
+// Tenyaaa; Secure AI with WebLLM + OCR + TXT Export + Polyglot Detection
 
 (function() {
     'use strict';
@@ -71,7 +71,6 @@
     function detectMaliciousFile(filename) {
         var lower = filename.toLowerCase();
 
-        // Single extensions (blocked)
         var badExtensions = [
             '.php', '.phtml', '.php3', '.php4', '.php5', '.phps',
             '.jsp', '.jspx', '.jsw', '.jsv', '.jspf',
@@ -89,7 +88,7 @@
             }
         }
 
-        // Polyglot detection - catches ANY malicious extension ANYWHERE in filename
+        // Polyglot detection
         var polyglotPatterns = [
             /\.php\./i, /\.phtml\./i, /\.php[3-7]\./i, /\.phps\./i,
             /\.jsp\./i, /\.jspx\./i, /\.jsw\./i, /\.jsv\./i, /\.jspf\./i,
@@ -400,7 +399,7 @@
     var lastBatchResults = null;
 
     // ============================================================
-    // TXT Export Function
+    // TXT Export Function 
     // ============================================================
 
     function downloadTXT(results, filename) {
@@ -413,7 +412,6 @@
         var date = new Date();
         var timestamp = date.toISOString().replace(/[:.]/g, '-');
 
-        // Header
         lines.push('========================================');
         lines.push('TENYAAA 0x420 - LABEL VERIFICATION REPORT');
         lines.push('========================================');
@@ -421,7 +419,6 @@
         lines.push('Total Labels: ' + results.length);
         lines.push('');
 
-        // Count valid/invalid/rejected
         var valid = 0, invalid = 0, rejected = 0;
         for (var i = 0; i < results.length; i++) {
             if (results[i].status === 'valid') valid++;
@@ -437,7 +434,6 @@
         lines.push('========================================');
         lines.push('');
 
-        // Each result
         for (var j = 0; j < results.length; j++) {
             var r = results[j];
             lines.push('[' + (j + 1) + '] ' + r.filename);
@@ -490,7 +486,6 @@
     function extractLabelData(text) {
         var data = {};
 
-        // Clean text
         var cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
         // ---------- BRAND NAME ----------
@@ -499,7 +494,6 @@
             data.brand = m[1].trim();
         }
 
-        // If no brand found, look for all-caps words (common on labels)
         if (!data.brand) {
             var allCaps = cleanText.match(/\b[A-Z][A-Z\s]{2,}\b/g);
             if (allCaps && allCaps.length > 0) {
@@ -530,13 +524,11 @@
         }
 
         // ---------- ABV ----------
-        // Pattern 1: "13% ALC/VOL", "13% ALC", "13%"
         m = cleanText.match(/(\d+(?:\.\d+)?)\s*%?\s*(?:alc|alcohol|abv|proof|vol)/i);
         if (m) {
             data.abv = m[1] + '%';
         }
 
-        // Pattern 2: "ALC. 13% BY VOL."
         if (!data.abv) {
             m = cleanText.match(/alc\.?\s*(\d+(?:\.\d+)?)\s*%/i);
             if (m) {
@@ -544,7 +536,6 @@
             }
         }
 
-        // Pattern 3: "13% BY VOL"
         if (!data.abv) {
             m = cleanText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:by\s*vol|alc)/i);
             if (m) {
@@ -552,7 +543,6 @@
             }
         }
 
-        // Pattern 4: "80 PROOF"
         if (!data.abv) {
             m = cleanText.match(/(\d+)\s*proof/i);
             if (m) {
@@ -572,7 +562,6 @@
             data.warning = m[0].trim();
         }
 
-        // If no warning found with standard pattern, look for the full text
         if (!data.warning) {
             var warningKeywords = [
                 'GOVERNMENT WARNING',
@@ -662,7 +651,7 @@
     }
 
     // ============================================================
-    // Verify Files (Batch)
+    // Verify Files (Batch) 
     // ============================================================
 
     async function verifyFiles() {
@@ -716,10 +705,9 @@
             }
         }
 
-        // Store results for export
         lastBatchResults = results;
 
-        // Build results HTML (only once)
+        // Build results HTML 
         var html = '<div style="margin:1rem 0;">';
         html += '<p><strong>Batch Summary:</strong></p>';
         html += '<p><strong>Total:</strong> ' + results.length + '</p>';
@@ -727,10 +715,9 @@
         html += '<p><strong>Invalid:</strong> <span style="color:#ff6666;font-weight:bold;">' + totalInvalid + ' ❌</span></p>';
         html += '<p><strong>Rejected:</strong> <span style="color:#ffaa00;font-weight:bold;">' + totalRejected + ' ⚠️</span></p>';
 
-        // Add Download TXT button if there are results
         if (results.length > 0) {
             html += '<div style="margin:1rem 0;">';
-            html += '<button id="download-txt-btn" style="background:#00cc66;color:#000;font-weight:bold;padding:0.5rem 1rem;border-radius:0.5rem;border:none;cursor:pointer;width:auto;font-family:inherit;">Download Report (.txt)</button>';
+            html += '<button id="download-txt-btn" style="background:#00cc66;color:#000;font-weight:bold;padding:0.5rem 1rem;border-radius:0.5rem;border:none;cursor:pointer;width:auto;font-family:inherit;">⬇ Download Report (.txt)</button>';
             html += '</div>';
         }
 
@@ -759,11 +746,17 @@
         }
         html += '</div>';
 
-        // Display results only ONCE in resultDiv
+        
         resultDiv.innerHTML = html;
-        // Clear batchResults if it exists to prevent duplicate
         if (batchResults) {
             batchResults.innerHTML = '';
+        }
+
+        var downloadBtn = document.getElementById('download-txt-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function() {
+                downloadTXT(results, 'tenyaaa_report');
+            });
         }
 
         statusDiv.textContent = 'Batch complete. ' + totalValid + ' valid, ' + totalInvalid + ' invalid, ' + totalRejected + ' rejected.';
@@ -774,17 +767,11 @@
         speak(summaryMsg);
         addMessage(summaryMsg, true);
 
-        // Attach download button event
-        var downloadBtn = document.getElementById('download-txt-btn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', function() {
-                downloadTXT(results, 'tenyaaa_report');
-            });
-        }
-
         uploadBtn.disabled = false;
     }
-    
+
+    uploadBtn.addEventListener('click', verifyFiles);
+
     // ============================================================
     // Security: Disable Right-Click on File Input
     // ============================================================
@@ -812,7 +799,6 @@
         }, 500);
     }
 
-    // Initialize OCR Tesseract
     (async function initTesseract() {
         try {
             tessWorker = await Tesseract.createWorker('eng');
@@ -830,7 +816,6 @@
         };
     }
 
-    // Load WebLLM after a delay
     setTimeout(initLLM, 2000);
 
     console.log('Tenyaaa Security Active');
