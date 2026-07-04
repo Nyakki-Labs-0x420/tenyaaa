@@ -7,6 +7,54 @@ Tenyaaa is a complete, standalone web application built for the Treasury Departm
 
 ---
 
+### Approach
+
+The application was built with a client-first architecture. Everything runs in the browser. There is no backend server, database, or data storage.
+
+This approach was chosen for three reasons.
+
+- First, it eliminates data retention concerns. Since nothing is stored, there is nothing to secure, retain, or delete.
+- Second, it works in restricted network environments. The agency network blocks many external domains. Cloud APIs often fail in federal environments. Local processing does not fail.
+- Third, it is cheaper to deploy and maintain. No server infrastructure. No ongoing costs. Just static files.
+
+The workflow is simple. A user uploads one or more images. Optical character recognition extracts the text. The application extracts brand name, alcohol content, volume, and the government warning statement. Results are displayed instantly. A downloadable report is available for record keeping.
+
+All processing is local. No data is sent to any server. The application works offline after the initial load.
+
+---
+
+### Tools Used
+
+The application uses three main technologies.
+
+**Tesseract.js:** This library provides optical character recognition. It runs in the browser using WebAssembly. It extracts text from images without any network calls. No cloud API is used.
+
+**WebLLM:** This library provides a local large language model which runs using WebGPU acceleration. The model executes on the user's graphics card or CPU. Everything is processed locally with no data ever leaving the device. If WebGPU is not available, the application falls back to pre-defined responses.
+
+**Web Speech API:** This browser API provides text-to-speech functionality. It allows the application to speak responses aloud. It runs completely in the browser.
+
+The application is written in plain JavaScript with no external dependencies beyond these libraries. All code is included in the repository. There are no hidden services or third-party calls.
+
+---
+
+### Assumptions Made
+
+The application makes several assumptions.
+
+**Image quality:** OCR works best with clear, well-lit images. Blurry photos, glare, or unusual angles may reduce accuracy. The application will reject images where no text can be extracted.
+
+**Browser support:** The AI model requires WebGPU support. This is available in recent versions of Chrome and Edge. Firefox does not support WebGPU. Brave requires special configuration. If the browser does not support WebGPU, the application falls back to pre-defined responses.
+
+**First load time:** The AI model is approximately two gigabytes. The first load may take several minutes while the model downloads to the browser cache. Subsequent loads are faster.
+
+**Device compatibility:** The application has not been optimized for mobile devices. It is designed for desktop use with a mouse and keyboard.
+
+**No COLA integration:** This prototype is standalone. It does not integrate with the existing COLA system. Integration would require additional engineering work and authorization.
+
+**Network requirements:** After the initial model download, the application requires no network connectivity. All processing is local. This was a deliberate choice to ensure compatibility with restricted federal networks.
+
+---
+
 ### How It Works
 
 1.  You upload one or more label images.
@@ -62,26 +110,6 @@ Tenyaaa was designed with security in mind from the start.
 
 ---
 
-### Technical Approach
-
-**Client-side only:** The application runs entirely in the browser using JavaScript. There is no backend server. No database. No data storage. This decision was made for three reasons.
-
-First, it eliminates data retention concerns. Since nothing is stored, there is nothing to secure, retain, or delete.
-
-Second, it works in restricted network environments. The agency network blocks many external domains. Cloud APIs fail. Serverless functions fail. Local processing does not fail.
-
-Third, it is cheaper to deploy and maintain. No server infrastructure. No ongoing costs. Just static files.
-
-**OCR:** Tesseract.js provides optical character recognition. It runs in the browser using WebAssembly. No cloud calls. No network latency.
-
-**AI:** WebLLM provides a local large language model using WebGPU acceleration. The model runs on your graphics card or CPU. Everything is processed locally. No data leaves your device.
-
-**Security:** Polyglot detection catches malicious double extensions. Rate limiting prevents abuse. IP banning tracks bad actors.
-
-**Export:** All verification results can be downloaded as a text file. The report includes timestamps, batch summaries, and detailed results for each image.
-
----
-
 ### Architecture
 
 ```
@@ -121,20 +149,6 @@ Browser
 
 ---
 
-### Trade-Offs and Limitations
-
-**OCR accuracy:** The optical character recognition works well with clear, well-lit images. Blurry photos, glare, or unusual angles may reduce accuracy.
-
-**WebGPU requirement:** The AI model requires WebGPU support. This is available in recent versions of Chrome and Edge. If your browser does not support WebGPU, the application falls back to pre-defined responses.
-
-**First load time:** The AI model is approximately two gigabytes. The first load may take several minutes while the model downloads to your browser cache. Subsequent loads are faster.
-
-**No mobile support:** The application has not been optimized for mobile devices. It is designed for desktop use.
-
-**No integration with COLA:** The prototype is standalone. It does not integrate with the existing COLA system. Integration would require additional engineering work.
-
----
-
 ### How to Use the Application
 
 1.  Open the application in your browser.
@@ -164,6 +178,20 @@ Upload an image containing this text to test the application. The system will ex
 
 ---
 
+### Trade-Offs and Limitations
+
+**OCR accuracy:** The optical character recognition works well with clear, well-lit images. Blurry photos, glare, or unusual angles may reduce accuracy.
+
+**WebGPU requirement:** The AI model requires WebGPU support. This is available in recent versions of Chrome and Edge. If your browser does not support WebGPU, the application falls back to pre-defined responses.
+
+**First load time:** The AI model is approximately two gigabytes. The first load may take several minutes while the model downloads to your browser cache. Subsequent loads are faster.
+
+**No mobile support:** The application has not been optimized for mobile devices. It is designed for desktop use.
+
+**No integration with COLA:** The prototype is standalone. It does not integrate with the existing COLA system. Integration would require additional engineering work.
+
+---
+
 ### Source Code Repository
 
 All source code is available at:
@@ -173,7 +201,7 @@ All source code is available at:
 
 ### Contact
 
-**Email:** Nyakki-Labs-0x420@proton.me
+**Email:** [Nyakki-Labs-0x420@proton.me](Nyakki-Labs-0x420@proton.me)
 
 For additional contact information, please refer to the email address listed in my resume.
 
