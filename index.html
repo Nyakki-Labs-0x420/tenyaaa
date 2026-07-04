@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenyaaa - Secure AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="banner">
+            <h1>Tenyaaa 0x420</h1>
+            <p>Secure AI - Batch Upload - Rate Limited</p>
+        </div>
+
+        <div id="ban-notice" style="display:none;background:#ff000022;border:2px solid #ff0000;padding:1rem;border-radius:1rem;margin-bottom:1rem;color:#ff6666;">
+            You have been banned for malicious activity.
+        </div>
+
+        <div class="card">
+            <h3>Label Verification</h3>
+            <p class="hint">Upload one or more label images. Rate limit: 10 files per minute.</p>
+            <input type="file" id="file-input" accept="image/*" multiple>
+            <button id="upload-btn">Verify Labels</button>
+            <div id="status">Ready</div>
+            <div id="batch-progress"></div>
+            <div id="batch-results"></div>
+            <div id="result"></div>
+        </div>
+
+        <div class="card">
+            <h3>Chat with Tenyaaa</h3>
+            <p class="hint">Local AI assistant. No data is sent to any server.</p>
+            <div id="chat-log">
+                <div class="msg bot">Nyaa~ Welcome. I am watching.</div>
+            </div>
+            <div class="input-row">
+                <input type="text" id="chat-input" placeholder="Type a message...">
+                <button id="chat-send">Send</button>
+            </div>
+        </div>
+
+        <div id="footer">
+            <p>All processing is local. No data is stored or transmitted.</p>
+            <p>Batch upload: multiple files supported. Rate limit: 10 files per minute.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
