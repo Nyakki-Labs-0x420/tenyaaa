@@ -97,7 +97,7 @@ button:disabled {
     transform: none;
 }
 
-#status, #result, #batch-progress {
+#status, #result, #llm-status, #batch-progress {
     margin-top: 1rem;
     padding: 0.75rem;
     border-radius: 1rem;
