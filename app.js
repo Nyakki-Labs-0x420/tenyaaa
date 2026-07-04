@@ -4,6 +4,32 @@
     'use strict';
 
     // ============================================================
+    // DOM References 
+    // ============================================================
+
+    var app = document.getElementById('app');
+    var banNotice = document.getElementById('ban-notice');
+    var fileInput = document.getElementById('file-input');
+    var uploadBtn = document.getElementById('upload-btn');
+    var statusDiv = document.getElementById('status');
+    var resultDiv = document.getElementById('result');
+    var batchProgress = document.getElementById('batch-progress');
+    var batchResults = document.getElementById('batch-results');
+    var chatLog = document.getElementById('chat-log');
+    var chatInput = document.getElementById('chat-input');
+    var chatSend = document.getElementById('chat-send');
+    var llmStatusDiv = document.getElementById('llm-status');
+
+    // ============================================================
+    // Check if elements exist
+    // ============================================================
+
+    if (!uploadBtn) {
+        console.error('Upload button not found!');
+        return;
+    }
+
+    // ============================================================
     // Rate Limiting
     // ============================================================
 
@@ -48,19 +74,34 @@
             banned.push(fp);
             localStorage.setItem('tenyaaa_banned', JSON.stringify(banned));
         }
-        document.getElementById('ban-notice').style.display = 'block';
-        document.getElementById('app').style.opacity = '0.3';
+        if (banNotice) {
+            banNotice.style.display = 'block';
+        }
+        if (app) {
+            app.style.opacity = '0.3';
+        }
         document.querySelectorAll('button, input').forEach(function(el) {
             el.disabled = true;
         });
     }
 
     if (isBanned()) {
-        document.getElementById('ban-notice').style.display = 'block';
-        document.getElementById('app').style.opacity = '0.3';
+        if (banNotice) {
+            banNotice.style.display = 'block';
+        }
+        if (app) {
+            app.style.opacity = '0.3';
+        }
         document.querySelectorAll('button, input').forEach(function(el) {
             el.disabled = true;
         });
+        // Still allow chat but disable upload
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+        }
+        if (fileInput) {
+            fileInput.disabled = true;
+        }
         return;
     }
 
@@ -88,7 +129,6 @@
             }
         }
 
-        // Polyglot detection
         var polyglotPatterns = [
             /\.php\./i, /\.phtml\./i, /\.php[3-7]\./i, /\.phps\./i,
             /\.jsp\./i, /\.jspx\./i, /\.jsw\./i, /\.jsv\./i, /\.jspf\./i,
@@ -208,19 +248,19 @@
     }
 
     // ============================================================
-    // WebLLM Setup - f32 Model (Works on all devices)
+    // WebLLM Setup
     // ============================================================
 
     var llmEngine = null;
     var isLLMReady = false;
     var isLLMLoading = false;
-    var llmStatusDiv = document.getElementById('llm-status');
-
     var MODEL_NAME = 'Phi-3-mini-4k-instruct-q4f32_1-MLC';
 
     function initLLM() {
         if (isLLMLoading) return;
         isLLMLoading = true;
+
+        if (!llmStatusDiv) return;
 
         llmStatusDiv.textContent = 'Loading AI model via WebGPU... (first load may take a few minutes)';
         llmStatusDiv.style.color = '#ffb3c6';
@@ -236,7 +276,9 @@
                         if (progress.text) {
                             statusText += ' - ' + progress.text;
                         }
-                        llmStatusDiv.textContent = statusText;
+                        if (llmStatusDiv) {
+                            llmStatusDiv.textContent = statusText;
+                        }
                         console.log('WebLLM progress:', progress.text, pct + '%');
                     }
                 });
@@ -244,14 +286,18 @@
             .then(function(engine) {
                 llmEngine = engine;
                 isLLMReady = true;
-                llmStatusDiv.textContent = 'AI model ready. All processing is local on your GPU.';
-                llmStatusDiv.style.color = '#66ff66';
+                if (llmStatusDiv) {
+                    llmStatusDiv.textContent = 'AI model ready. All processing is local on your GPU.';
+                    llmStatusDiv.style.color = '#66ff66';
+                }
                 addMessage('AI model ready. All processing is local. No data leaves your device.', true);
                 console.log('WebLLM engine ready');
             })
             .catch(function(err) {
-                llmStatusDiv.textContent = 'WebGPU AI failed: ' + err.message + '. Using fallback responses.';
-                llmStatusDiv.style.color = '#ffb3c6';
+                if (llmStatusDiv) {
+                    llmStatusDiv.textContent = 'WebGPU AI failed: ' + err.message + '. Using fallback responses.';
+                    llmStatusDiv.style.color = '#ffb3c6';
+                }
                 console.error('WebLLM error:', err);
                 addMessage('WebGPU AI failed to load. Using fallback responses. Your privacy is still protected.', true);
             });
@@ -346,12 +392,9 @@
     // Chat UI
     // ============================================================
 
-    var chatLog = document.getElementById('chat-log');
-    var chatInput = document.getElementById('chat-input');
-    var chatSend = document.getElementById('chat-send');
-
     function addMessage(text, isBot) {
         if (isBot === undefined) isBot = true;
+        if (!chatLog) return;
         var div = document.createElement('div');
         div.className = 'msg ' + (isBot ? 'bot' : 'user');
         div.textContent = text;
@@ -361,6 +404,7 @@
     }
 
     async function handleChat() {
+        if (!chatInput) return;
         var text = chatInput.value.trim();
         if (!text) {
             speak('Say something. I am waiting.');
@@ -379,30 +423,18 @@
         }
     }
 
-    chatSend.addEventListener('click', handleChat);
-    chatInput.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') handleChat();
-    });
-
     // ============================================================
     // Label Verification with OCR + TXT Export
     // ============================================================
-
-    var fileInput = document.getElementById('file-input');
-    var uploadBtn = document.getElementById('upload-btn');
-    var statusDiv = document.getElementById('status');
-    var resultDiv = document.getElementById('result');
-    var batchProgress = document.getElementById('batch-progress');
-    var batchResults = document.getElementById('batch-results');
 
     var tessWorker = null;
     var lastBatchResults = null;
 
     // ============================================================
-    // TXT Export Function 
+    // TXT Export Function
     // ============================================================
 
-    function downloadTXT(results, filename) {
+    function downloadTXT(results) {
         if (!results || results.length === 0) {
             speak('No data to export.');
             return;
@@ -651,37 +683,42 @@
     }
 
     // ============================================================
-    // Verify Files (Batch) 
+    // Verify Files (Batch)
     // ============================================================
 
     async function verifyFiles() {
+        if (!fileInput) {
+            console.error('File input not found');
+            return;
+        }
+
         var files = fileInput.files;
         if (!files || files.length === 0) {
             speak('No files selected.');
-            statusDiv.textContent = 'No files selected';
+            if (statusDiv) statusDiv.textContent = 'No files selected';
             return;
         }
 
         if (!checkRateLimit()) {
-            statusDiv.textContent = 'Rate limit exceeded. Please wait.';
+            if (statusDiv) statusDiv.textContent = 'Rate limit exceeded. Please wait.';
             speak('Rate limit exceeded. Please wait.');
             return;
         }
 
         if (!tessWorker) {
-            statusDiv.textContent = 'Initializing OCR engine...';
+            if (statusDiv) statusDiv.textContent = 'Initializing OCR engine...';
             try {
                 tessWorker = await Tesseract.createWorker('eng');
-                statusDiv.textContent = 'OCR engine ready.';
+                if (statusDiv) statusDiv.textContent = 'OCR engine ready.';
             } catch (err) {
-                statusDiv.textContent = 'OCR initialization failed: ' + err.message;
+                if (statusDiv) statusDiv.textContent = 'OCR initialization failed: ' + err.message;
                 speak('OCR initialization failed.');
                 return;
             }
         }
 
-        uploadBtn.disabled = true;
-        statusDiv.textContent = 'Processing ' + files.length + ' files...';
+        if (uploadBtn) uploadBtn.disabled = true;
+        if (statusDiv) statusDiv.textContent = 'Processing ' + files.length + ' files...';
         speak('Processing ' + files.length + ' labels. This may take a moment.');
 
         var results = [];
@@ -691,7 +728,7 @@
 
         for (var i = 0; i < files.length; i++) {
             var file = files[i];
-            statusDiv.textContent = 'Processing ' + (i + 1) + ' of ' + files.length + ': ' + file.name;
+            if (statusDiv) statusDiv.textContent = 'Processing ' + (i + 1) + ' of ' + files.length + ': ' + file.name;
 
             var result = await processSingleFile(file);
             results.push(result);
@@ -707,7 +744,7 @@
 
         lastBatchResults = results;
 
-        // Build results HTML 
+        // Build results HTML
         var html = '<div style="margin:1rem 0;">';
         html += '<p><strong>Batch Summary:</strong></p>';
         html += '<p><strong>Total:</strong> ' + results.length + '</p>';
@@ -746,20 +783,26 @@
         }
         html += '</div>';
 
-        
-        resultDiv.innerHTML = html;
+        if (resultDiv) {
+            resultDiv.innerHTML = html;
+        }
+
+        // Clear batchResults to prevent duplicate
         if (batchResults) {
             batchResults.innerHTML = '';
         }
 
+        // Attach download button event
         var downloadBtn = document.getElementById('download-txt-btn');
         if (downloadBtn) {
             downloadBtn.addEventListener('click', function() {
-                downloadTXT(results, 'tenyaaa_report');
+                downloadTXT(results);
             });
         }
 
-        statusDiv.textContent = 'Batch complete. ' + totalValid + ' valid, ' + totalInvalid + ' invalid, ' + totalRejected + ' rejected.';
+        if (statusDiv) {
+            statusDiv.textContent = 'Batch complete. ' + totalValid + ' valid, ' + totalInvalid + ' invalid, ' + totalRejected + ' rejected.';
+        }
 
         var holiday = getHoliday();
         var summaryMsg = 'Nyaa~ Batch complete. ' + totalValid + ' valid labels. ' + totalInvalid + ' invalid. ' + totalRejected + ' rejected.';
@@ -767,26 +810,56 @@
         speak(summaryMsg);
         addMessage(summaryMsg, true);
 
-        uploadBtn.disabled = false;
+        if (uploadBtn) uploadBtn.disabled = false;
     }
 
-    uploadBtn.addEventListener('click', verifyFiles);
+    // ============================================================
+    // ATTACH EVENT LISTENERS 
+    // ============================================================
+
+    // Verify button
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', verifyFiles);
+        console.log('Upload button listener attached');
+    } else {
+        console.error('Upload button not found!');
+    }
+
+    // Chat send button
+    if (chatSend) {
+        chatSend.addEventListener('click', handleChat);
+        console.log('Chat send listener attached');
+    }
+
+    // Chat input enter key
+    if (chatInput) {
+        chatInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                handleChat();
+            }
+        });
+        console.log('Chat enter key listener attached');
+    }
 
     // ============================================================
     // Security: Disable Right-Click on File Input
     // ============================================================
 
-    fileInput.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-        speak('Right-click is disabled for security.');
-        addMessage('Right-click disabled for security.', true);
-    });
+    if (fileInput) {
+        fileInput.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            speak('Right-click is disabled for security.');
+            addMessage('Right-click disabled for security.', true);
+        });
+    }
 
     // ============================================================
     // Initialize
     // ============================================================
 
-    statusDiv.textContent = 'Ready. Batch upload supported. Rate limit: ' + RATE_LIMIT + ' files per minute.';
+    if (statusDiv) {
+        statusDiv.textContent = 'Ready. Batch upload supported. Rate limit: ' + RATE_LIMIT + ' files per minute.';
+    }
 
     var holiday = getHoliday();
     if (holiday) {
@@ -799,16 +872,22 @@
         }, 500);
     }
 
+    // Initialize OCR
     (async function initTesseract() {
         try {
             tessWorker = await Tesseract.createWorker('eng');
-            statusDiv.textContent = 'Ready. Batch upload supported. Rate limit: ' + RATE_LIMIT + ' files per minute.';
+            if (statusDiv) {
+                statusDiv.textContent = 'Ready. Batch upload supported. Rate limit: ' + RATE_LIMIT + ' files per minute.';
+            }
         } catch (err) {
-            statusDiv.textContent = 'OCR initialization failed: ' + err.message + '. Refresh to retry.';
+            if (statusDiv) {
+                statusDiv.textContent = 'OCR initialization failed: ' + err.message + '. Refresh to retry.';
+            }
             console.error('Tesseract init error:', err);
         }
     })();
 
+    // Preload voices
     if (window.speechSynthesis) {
         window.speechSynthesis.getVoices();
         window.speechSynthesis.onvoiceschanged = function() {
@@ -816,6 +895,7 @@
         };
     }
 
+    // Load WebLLM after a delay
     setTimeout(initLLM, 2000);
 
     console.log('Tenyaaa Security Active');
@@ -827,5 +907,6 @@
     console.log('XSS prevention: Enabled');
     console.log('IP banning: Enabled');
     console.log('WebLLM: Loading...');
+    console.log('Ready for use.');
 
 })();
