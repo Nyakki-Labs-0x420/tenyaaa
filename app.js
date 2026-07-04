@@ -1,4 +1,4 @@
-// Tenyaaa - Secure AI with WebLLM
+// Tenyaaa - Secure AI with WebLLM + OCR + TXT Export
 
 (function() {
     'use strict';
@@ -78,7 +78,52 @@
             '.sh', '.bash', '.zsh', '.fish',
             '.py', '.rb', '.go', '.rs',
             '.exe', '.dll', '.so', '.bin', '.elf',
-            '.htaccess', '.htpasswd', '.git', '.svn'
+            '.htaccess', '.htpasswd', '.git', '.svn', 
+            // PHP Polyglots
+            '.php.png', '.php.jpg', '.php.jpeg', '.php.webp', '.php.svg', '.php.gif',
+            '.php.bmp', '.php.ico', '.php.tiff', '.php.tif',
+            '.phtml.png', '.phtml.jpg', '.phtml.svg', '.phtml.gif',
+            '.php5.png', '.php5.jpg', '.php5.svg', '.php5.gif',
+            '.php7.png', '.php7.jpg', '.php7.svg', '.php7.gif',
+            '.pht.png', '.pht.jpg', '.pht.svg', '.pht.gif',
+            '.phar.png', '.phar.jpg', '.phar.svg', '.phar.gif',
+            '.inc.png', '.inc.jpg', '.inc.svg', '.inc.gif',
+
+            // JSP (Java) Polyglots
+            '.jsp.png', '.jsp.jpg', '.jsp.jpeg', '.jsp.webp', '.jsp.svg', '.jsp.gif',
+            '.jsp.bmp', '.jsp.ico',
+            '.jspx.png', '.jspx.jpg', '.jspx.svg', '.jspx.gif',
+            '.jsw.png', '.jsw.jpg', '.jsw.svg', '.jsw.gif',
+            '.jsv.png', '.jsv.jpg', '.jsv.svg', '.jsv.gif',
+            '.jspf.png', '.jspf.jpg', '.jspf.svg', '.jspf.gif',
+
+            // ASP/ASPX (Windows IIS) Polyglots
+            '.asp.png', '.asp.jpg', '.asp.jpeg', '.asp.webp', '.asp.svg', '.asp.gif',
+            '.asp.bmp', '.asp.ico',
+            '.aspx.png', '.aspx.jpg', '.aspx.jpeg', '.aspx.webp', '.aspx.svg', '.aspx.gif',
+            '.cer.png', '.cer.jpg', '.cer.svg', '.cer.gif',
+            '.asa.png', '.asa.jpg', '.asa.svg', '.asa.gif',
+            '.cdx.png', '.cdx.jpg', '.cdx.svg', '.cdx.gif',
+            '.htr.png', '.htr.jpg', '.htr.svg', '.htr.gif',
+
+            // ColdFusion Polyglots
+            '.cfm.png', '.cfm.jpg', '.cfm.svg', '.cfm.gif',
+            '.cfml.png', '.cfml.jpg', '.cfml.svg', '.cfml.gif',
+            '.cfc.png', '.cfc.jpg', '.cfc.svg', '.cfc.gif',
+
+            // Perl/CGI Polyglots
+            '.pl.png', '.pl.jpg', '.pl.svg', '.pl.gif',
+            '.cgi.png', '.cgi.jpg', '.cgi.svg', '.cgi.gif',
+            '.pm.png', '.pm.jpg', '.pm.svg', '.pm.gif',
+
+            // Node.js Polyglots
+            '.js.png', '.js.jpg', '.js.svg', '.js.gif',
+            '.node.png', '.node.jpg', '.node.svg', '.node.gif',
+
+            // Other/Edge Cases
+            '.shtml.png', '.shtml.jpg', '.shtml.svg', '.shtml.gif',
+            '.htaccess.png', '.htaccess.jpg', '.htaccess.svg',
+            '.config.png', '.config.jpg', '.config.svg'
         ];
 
         for (var i = 0; i < badExtensions.length; i++) {
@@ -188,7 +233,7 @@
     }
 
     // ============================================================
-    // WebLLM Setup - Dynamic Import from CDN
+    // WebLLM Setup 
     // ============================================================
 
     var llmEngine = null;
@@ -196,7 +241,7 @@
     var isLLMLoading = false;
     var llmStatusDiv = document.getElementById('llm-status');
 
-    var MODEL_NAME = 'Qwen2.5-0.5B-Instruct-q4f32_1-MLC';
+    var MODEL_NAME = 'Phi-3-mini-4k-instruct-q4f32_1-MLC';
 
     function initLLM() {
         if (isLLMLoading) return;
@@ -205,7 +250,6 @@
         llmStatusDiv.textContent = 'Loading AI model via WebGPU... (first load may take a few minutes)';
         llmStatusDiv.style.color = '#ffb3c6';
 
-        // Dynamic import WebLLM from CDN
         import('https://esm.run/@mlc-ai/web-llm')
             .then(function(module) {
                 var CreateMLCEngine = module.CreateMLCEngine;
@@ -366,7 +410,7 @@
     });
 
     // ============================================================
-    // Label Verification
+    // Label Verification with OCR + TXT Export
     // ============================================================
 
     var fileInput = document.getElementById('file-input');
@@ -377,19 +421,211 @@
     var batchResults = document.getElementById('batch-results');
 
     var tessWorker = null;
+    var lastBatchResults = null;
+
+    // ============================================================
+    // TXT Export Function (Browser-only)
+    // ============================================================
+
+    function downloadTXT(results, filename) {
+        if (!results || results.length === 0) {
+            speak('No data to export.');
+            return;
+        }
+
+        var lines = [];
+        var date = new Date();
+        var timestamp = date.toISOString().replace(/[:.]/g, '-');
+
+        // Header
+        lines.push('========================================');
+        lines.push('TENYAAA 0x420 - LABEL VERIFICATION REPORT');
+        lines.push('========================================');
+        lines.push('Generated: ' + date.toLocaleString());
+        lines.push('Total Labels: ' + results.length);
+        lines.push('');
+
+        // Count valid/invalid/rejected
+        var valid = 0, invalid = 0, rejected = 0;
+        for (var i = 0; i < results.length; i++) {
+            if (results[i].status === 'valid') valid++;
+            else if (results[i].status === 'invalid') invalid++;
+            else rejected++;
+        }
+
+        lines.push('Summary:');
+        lines.push('  Valid:   ' + valid);
+        lines.push('  Invalid: ' + invalid);
+        lines.push('  Rejected:' + rejected);
+        lines.push('');
+        lines.push('========================================');
+        lines.push('');
+
+        // Each result
+        for (var j = 0; j < results.length; j++) {
+            var r = results[j];
+            lines.push('[' + (j + 1) + '] ' + r.filename);
+            lines.push('Status: ' + r.status.toUpperCase());
+
+            if (r.label) {
+                if (r.label.brand) lines.push('Brand:  ' + r.label.brand);
+                else lines.push('Brand:  NOT FOUND');
+                if (r.label.abv) lines.push('ABV:    ' + r.label.abv);
+                else lines.push('ABV:    NOT FOUND');
+                if (r.label.volume) lines.push('Volume: ' + r.label.volume);
+                else lines.push('Volume: NOT FOUND');
+                if (r.label.warning) lines.push('Warning: FOUND');
+                else lines.push('Warning: NOT FOUND');
+            }
+
+            if (r.errors && r.errors.length > 0) {
+                lines.push('Issues: ' + r.errors.join(', '));
+            }
+
+            if (r.reason) {
+                lines.push('Reason: ' + r.reason);
+            }
+
+            lines.push('');
+        }
+
+        lines.push('========================================');
+        lines.push('End of Report');
+        lines.push('========================================');
+
+        var content = lines.join('\n');
+        var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'tenyaaa_report_' + timestamp + '.txt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        speak('Report downloaded.');
+    }
+
+    // ============================================================
+    // Robust Label Data Extraction
+    // ============================================================
 
     function extractLabelData(text) {
         var data = {};
-        var m = text.match(/(?:brand|name)[:\s]+([A-Z][A-Z\s]+)/i);
-        if (m) data.brand = m[1].trim();
-        m = text.match(/(\d+(?:\.\d+)?)\s*%?\s*(?:alc|alcohol|abv|proof)/i);
-        if (m) data.abv = m[1] + '%';
-        m = text.match(/(\d+(?:\.\d+)?)\s*(?:ml|cl|L|oz|fl\s*oz)/i);
-        if (m) data.volume = m[0].trim();
-        m = text.match(/(GOVERNMENT\s*WARNING[:\s]*[^\.]+\.)/i);
-        if (m) data.warning = m[1].trim();
+
+        // Clean text
+        var cleanText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+        // ---------- BRAND NAME ----------
+        var m = cleanText.match(/(?:brand|name|distillery|winery|brewery)[:\s]+([A-Z][A-Z\s]+)/i);
+        if (m) {
+            data.brand = m[1].trim();
+        }
+
+        // If no brand found, look for all-caps words (common on labels)
+        if (!data.brand) {
+            var allCaps = cleanText.match(/\b[A-Z][A-Z\s]{2,}\b/g);
+            if (allCaps && allCaps.length > 0) {
+                var skipWords = [
+                    'WHISKEY', 'WHISKY', 'BEER', 'WINE', 'PROOF', 'ALCOHOL', 'VOL', 'ML', 'L', 'OZ',
+                    'BOTTLED', 'BOND', 'YEARS', 'AGED', 'STRAIGHT', 'BOURBON', 'RYE', 'SCOTCH',
+                    'GIN', 'VODKA', 'RUM', 'TEQUILA', 'CONTAINS', 'SULFITES', 'MERLOT', 'CABERNET',
+                    'SAUVIGNON', 'RED', 'WHITE', 'BLEND', 'ESTATE', 'CELLARS', 'CITY', 'STATE',
+                    'RESERVE', 'PRIVATE', 'SELECT', 'BARREL', 'SINGLE', 'MALT', 'PORT', 'SHERRY',
+                    'CHARDONNAY', 'PINOT', 'NOIR', 'ZINFANDEL', 'SYRAH', 'MALBEC', 'RIESLING',
+                    'CABERNET SAUVIGNON', 'MUSCAT', 'SEMILLON', 'CHENIN BLANC', 'SAUVIGNON BLANC',
+                    'SPARKLING', 'ROSE', 'ROSÉ', 'VINTAGE', 'ESTATE BOTTLED', 'PRODUCE', 'PRODUCT',
+                    'HANDCRAFTED', 'CRAFT', 'ARTISAN', 'SMALL', 'BATCH', 'SIGNATURE', 'FAMILY',
+                    'COLLECTION', 'LEGACY', 'HERITAGE', 'VINTNERS', 'SELECT', 'SPECIAL', 'RESERVE'
+                ];
+                var foundBrand = null;
+                for (var i = 0; i < allCaps.length; i++) {
+                    var word = allCaps[i].trim();
+                    // Skip short words or common skip words
+                    if (word.length > 2 && skipWords.indexOf(word) === -1 && !word.includes('.')) {
+                        foundBrand = word;
+                        break;
+                    }
+                }
+                if (foundBrand) {
+                    data.brand = foundBrand;
+                }
+            }
+        }
+
+        // ---------- ABV ----------
+        // Pattern 1: "13% ALC/VOL", "13% ALC", "13%"
+        m = cleanText.match(/(\d+(?:\.\d+)?)\s*%?\s*(?:alc|alcohol|abv|proof|vol)/i);
+        if (m) {
+            data.abv = m[1] + '%';
+        }
+
+        // Pattern 2: "ALC. 13% BY VOL."
+        if (!data.abv) {
+            m = cleanText.match(/alc\.?\s*(\d+(?:\.\d+)?)\s*%/i);
+            if (m) {
+                data.abv = m[1] + '%';
+            }
+        }
+
+        // Pattern 3: "13% BY VOL"
+        if (!data.abv) {
+            m = cleanText.match(/(\d+(?:\.\d+)?)\s*%\s*(?:by\s*vol|alc)/i);
+            if (m) {
+                data.abv = m[1] + '%';
+            }
+        }
+
+        // Pattern 4: "80 PROOF"
+        if (!data.abv) {
+            m = cleanText.match(/(\d+)\s*proof/i);
+            if (m) {
+                data.abv = (parseInt(m[1]) / 2) + '%';
+            }
+        }
+
+        // ---------- VOLUME ----------
+        m = cleanText.match(/(\d+(?:\.\d+)?)\s*(?:ml|cl|L|l|oz|fl\s*oz|liter|litre)/i);
+        if (m) {
+            data.volume = m[0].trim();
+        }
+
+        // ---------- GOVERNMENT WARNING ----------
+        m = cleanText.match(/(?:government\s*warning|surgeon\s*general)[:\s]*([^\.]+\.)/i);
+        if (m) {
+            data.warning = m[0].trim();
+        }
+
+        // If no warning found with standard pattern, look for the full text
+        if (!data.warning) {
+            var warningKeywords = [
+                'GOVERNMENT WARNING',
+                'SURGEON GENERAL'
+            ];
+            for (var w = 0; w < warningKeywords.length; w++) {
+                var idx = cleanText.toUpperCase().indexOf(warningKeywords[w]);
+                if (idx !== -1) {
+                    // Grab from the keyword to the end of the paragraph
+                    var start = Math.max(0, idx);
+                    var end = cleanText.indexOf('\n\n', idx);
+                    if (end === -1) end = cleanText.indexOf('\n', idx);
+                    if (end === -1) end = Math.min(cleanText.length, idx + 500);
+                    var warningText = cleanText.substring(start, end).trim();
+                    if (warningText.length > 10) {
+                        data.warning = warningText;
+                        break;
+                    }
+                }
+            }
+        }
+
         return data;
     }
+
+    // ============================================================
+    // Process Single File
+    // ============================================================
 
     async function processSingleFile(file) {
         var filename = file.name;
@@ -425,6 +661,8 @@
                 };
             }
 
+            console.log('OCR Text for ' + filename + ':', text);
+
             var label = extractLabelData(text);
             var errors = [];
             if (!label.brand) errors.push('Brand missing');
@@ -448,6 +686,10 @@
             };
         }
     }
+
+    // ============================================================
+    // Verify Files (Batch)
+    // ============================================================
 
     async function verifyFiles() {
         var files = fileInput.files;
@@ -500,12 +742,24 @@
             }
         }
 
+        // Store results for export
+        lastBatchResults = results;
+
+        // Build results HTML
         var html = '<div style="margin:1rem 0;">';
         html += '<p><strong>Batch Summary:</strong></p>';
         html += '<p><strong>Total:</strong> ' + results.length + '</p>';
         html += '<p><strong>Valid:</strong> <span style="color:#66ff66;font-weight:bold;">' + totalValid + ' ✅</span></p>';
         html += '<p><strong>Invalid:</strong> <span style="color:#ff6666;font-weight:bold;">' + totalInvalid + ' ❌</span></p>';
         html += '<p><strong>Rejected:</strong> <span style="color:#ffaa00;font-weight:bold;">' + totalRejected + ' ⚠️</span></p>';
+
+        // Add Download TXT button if there are results
+        if (results.length > 0) {
+            html += '<div style="margin:1rem 0;">';
+            html += '<button id="download-txt-btn" style="background:#00cc66;color:#000;font-weight:bold;padding:0.5rem 1rem;border-radius:0.5rem;border:none;cursor:pointer;width:auto;font-family:inherit;">⬇ Download Report (.txt)</button>';
+            html += '</div>';
+        }
+
         html += '<hr style="border-color:#ff6b9d;opacity:0.2;margin:1rem 0;">';
 
         for (var j = 0; j < results.length; j++) {
@@ -535,6 +789,14 @@
             batchResults.innerHTML = html;
         }
         resultDiv.innerHTML = html;
+
+        // Attach download button event
+        var downloadBtn = document.getElementById('download-txt-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function() {
+                downloadTXT(results, 'tenyaaa_report');
+            });
+        }
 
         statusDiv.textContent = 'Batch complete. ' + totalValid + ' valid, ' + totalInvalid + ' invalid, ' + totalRejected + ' rejected.';
 
@@ -576,6 +838,7 @@
         }, 500);
     }
 
+    // Initialize OCR Tesseract
     (async function initTesseract() {
         try {
             tessWorker = await Tesseract.createWorker('eng');
@@ -600,6 +863,8 @@
     console.log('Batch upload: Enabled');
     console.log('Rate limit: ' + RATE_LIMIT + ' files per minute');
     console.log('File scanning: Enabled');
+    console.log('OCR: Enabled');
+    console.log('TXT Export: Enabled');
     console.log('XSS prevention: Enabled');
     console.log('IP banning: Enabled');
     console.log('WebLLM: Loading...');
