@@ -9,7 +9,7 @@
 <body>
     <div id="app">
         <div id="banner">
-            <h1>Tenyaaa 0x420</h1>
+            <h1>Tenyaaa</h1>
             <p>Secure AI - Batch Upload - Rate Limited</p>
         </div>
 
@@ -48,6 +48,13 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="app.js"></script>
+    <script type="importmap">
+    {
+        "imports": {
+            "@mlc-ai/web-llm": "https://esm.run/@mlc-ai/web-llm"
+        }
+    }
+    </script>
+    <script type="module" src="src/app.js"></script>
 </body>
 </html>
